@@ -1,0 +1,10 @@
+.dockerignore
+Dockerfile
+.git*
+node_modules
+npm-debug.log
+.DS_Store
+README.md
+.vscode
+cloudbuild.yaml
+k8s/*

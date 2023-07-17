@@ -1,0 +1,45 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: votes-app
+spec:
+  selector:
+    matchLabels:
+      app: votes-app
+      role: frontend
+  template:
+    metadata:
+      name: frontend
+      labels:
+        app: votes-app
+        role: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: us-central1-docker.pkg.dev/PROJECT_ID/{_REPOSITORY}/{_SERVICE_NAME}:1.0.0
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "500Mi"
+            cpu: "100m"
+        ports:
+        - name: frontend
+          containerPort: 3001
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: votes-app
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3001
+    targetPort: 3001
+    protocol: TCP
+  selector:
+    app: votes-app
+    role: frontend

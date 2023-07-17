@@ -1,0 +1,32 @@
+steps:
+- name: gcr.io/cloud-builders/gcloud
+  entrypoint: bash
+  args: 
+    - -cx
+    - |
+        API_INGRESS=$(gcloud compute forwarding-rules list --format="value(IPAddress)")
+        sed -i "s/{API_INGRESS}/$$API_INGRESS/g" .env
+- name: gcr.io/cloud-builders/docker
+  entrypoint: bash
+  args: 
+    - -cx
+    - |
+        docker build -t ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:latest \
+                     -t ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA} .
+- name: gcr.io/cloud-builders/docker
+  entrypoint: bash
+  args: 
+    - -cx
+    - |
+        docker push -a ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}
+- name: gcr.io/cloud-builders/gcloud
+  env:
+    - KUBECONFIG=/kube/config
+  entrypoint: bash
+  args:
+    - -cx
+    - |
+        gcloud container clusters get-credentials "${_CLUSTER}" --project "${PROJECT_ID}" --zone "${_ZONE}"  
+        sed -i "s|${_REGION}-docker.pkg.dev/PROJECT_ID/{_REPOSITORY}/{_SERVICE_NAME}:.*|${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}|" k8s/deploy.yaml
+        kubectl get ns ${_REPOSITORY} || kubectl create ns ${_REPOSITORY}
+        kubectl apply --namespace ${_REPOSITORY} -f k8s/deploy.yaml
